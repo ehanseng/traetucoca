@@ -93,6 +93,60 @@
     });
   });
 
+  /* ============ Galería del proceso de diseño ============
+     Carga dinámica desde imagenes/proceso/. Recorre filas A, B, C, …
+     y para automáticamente cuando una fila completa está vacía.
+     Cada slot (ej. C2) prueba .jpeg/.jpg/.png/.webp (mayús y minús).
+     Click en cualquier tarjeta → lightbox. */
+  const procGallery = document.querySelector('.process-gallery[data-gallery="proceso"]');
+  if (procGallery) {
+    const cols = [1, 2, 3, 4];
+    const exts = [
+      'jpeg', 'jpg', 'png', 'webp',
+      'JPEG', 'JPG', 'PNG', 'WEBP'
+    ];
+    const allRows = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    function probeSlot(slot) {
+      return new Promise(resolve => {
+        let idx = 0;
+        const tryNext = () => {
+          if (idx >= exts.length) { resolve(null); return; }
+          const url = `imagenes/proceso/${slot}.${exts[idx]}`;
+          const probe = new Image();
+          probe.onload = () => resolve(url);
+          probe.onerror = () => { idx++; tryNext(); };
+          probe.src = url;
+        };
+        tryNext();
+      });
+    }
+
+    function appendTile(slot, url) {
+      const figure = document.createElement('figure');
+      figure.className = 'process-item';
+      figure.dataset.slot = slot;
+      figure.dataset.imgSrc = url;
+      const img = document.createElement('img');
+      img.alt = `Proceso · ${slot}`;
+      img.src = url;
+      figure.appendChild(img);
+      figure.addEventListener('click', () => {
+        openLightbox(url, `Proceso de diseño · ${slot}`);
+      });
+      procGallery.appendChild(figure);
+    }
+
+    (async () => {
+      for (const row of allRows) {
+        const urls = await Promise.all(cols.map(c => probeSlot(`${row}${c}`)));
+        const found = urls.some(u => u !== null);
+        if (!found) break; /* primera fila vacía → fin de la galería */
+        urls.forEach((url, i) => { if (url) appendTile(`${row}${cols[i]}`, url); });
+      }
+    })();
+  }
+
   lbClose.addEventListener('click', closeLightbox);
   lightbox.addEventListener('click', e => {
     if (e.target === lightbox) closeLightbox();
