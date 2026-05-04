@@ -30,19 +30,75 @@
     const wrap = document.createElement('div');
     wrap.className = 'cell-img';
     const img = document.createElement('img');
-    img.alt = '';
+    img.alt = title || '';
     img.loading = 'lazy';
     /* prueba .jpg → .jpeg → .png → .webp; si todo falla, deja el degradado madera */
     const exts = ['jpg', 'jpeg', 'png', 'webp'];
     let i = 0;
     img.onerror = () => {
       i++;
-      if (i < exts.length) img.src = `imagenes/matriz/${slug}.${exts[i]}`;
-      else img.remove();
+      if (i < exts.length) {
+        img.src = `imagenes/matriz/${slug}.${exts[i]}`;
+      } else {
+        img.remove();
+        item.classList.remove('has-image');
+        delete item.dataset.imgSrc;
+      }
+    };
+    img.onload = () => {
+      item.classList.add('has-image');
+      item.dataset.imgSrc = img.src;
     };
     img.src = `imagenes/matriz/${slug}.${exts[0]}`;
     wrap.appendChild(img);
     item.insertBefore(wrap, item.firstChild);
+  });
+
+  /* ============ Lightbox de la matriz ============ */
+  const lightbox = document.createElement('div');
+  lightbox.className = 'lightbox';
+  lightbox.setAttribute('aria-hidden', 'true');
+  lightbox.innerHTML = `
+    <button class="lightbox-close" type="button" aria-label="Cerrar">×</button>
+    <figure class="lightbox-figure">
+      <img class="lightbox-img" alt="" />
+      <figcaption class="lightbox-caption"></figcaption>
+    </figure>
+  `;
+  document.body.appendChild(lightbox);
+  const lbImg = lightbox.querySelector('.lightbox-img');
+  const lbCaption = lightbox.querySelector('.lightbox-caption');
+  const lbClose = lightbox.querySelector('.lightbox-close');
+
+  function openLightbox(src, caption) {
+    lbImg.src = src;
+    lbCaption.textContent = caption || '';
+    lightbox.classList.add('is-open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('is-open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    lbImg.src = '';
+  }
+
+  document.querySelectorAll('.matrix-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const src = item.dataset.imgSrc;
+      if (!src) return;
+      const title = item.querySelector('h3')?.textContent.trim() || '';
+      openLightbox(src, title);
+    });
+  });
+
+  lbClose.addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', e => {
+    if (e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && lightbox.classList.contains('is-open')) closeLightbox();
   });
 
   const chips = document.querySelectorAll('.filters .chip');
